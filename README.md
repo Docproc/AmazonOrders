@@ -8,6 +8,8 @@ Download "All years" as CSV (or individual years)
 
 `analyse.py <filename.csv>`
 
+Filename should be in the format `name_year_XXX.csv`
+
 ## Example output
 
 ```

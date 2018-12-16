@@ -1,19 +1,33 @@
+# -*- coding: utf-8 -*-
+
 import csv
-import re
 import sys
 
 '''
 Analyse Amazon orders
 
-Use "Amazon Order History Reporter" Chrome extension, https://chrome.google.com/webstore/detail/amazon-order-history-repo/mgkilgclilajckgnedgjgnfdokkgnibi?hl=en
-
-Download "All years" as CSV (or individual years)
-
-
+See README.md
 '''
-# TODO download all history files
-# TODO parse file names for person and year
-# TODO command-line option for plain text output
+
+# Convert pound 1.23 string to float
+# Just chop off the first character to get around pound sign encoding weirdness
+def cost_to_float(str_cost):
+    cost = str_cost[2:]
+    try:
+        return float(cost)
+    except ValueError:
+        return 0.0
+
+
+# Extract the name and year from the filename
+# Assumed format name_year_XXX.csv
+def name_and_year_from_filename(file_name):
+    bits = file_name.split('_')
+    if not str(bits[1]).isdigit():
+        print "Error: filename should be in the format name_year_XXX.csv", bits[1]
+        sys.exit(1)
+    return bits[0], bits[1]
+
 
 
 if len(sys.argv) != 2:
@@ -22,31 +36,25 @@ if len(sys.argv) != 2:
 
 filename = sys.argv[1]
 
+POUND = unichr(163)
+
 with open(filename, 'rb') as f:
-    reader = csv.reader(f)
-    headers = []
+    reader = csv.DictReader(f)
     kindle_orders = []
     other_orders = []
-    year = 0
-    line_count = 0
-    for row in reader:
-        if line_count == 0:
-            headers = row
+    kindle_cost = 0.00
+    other_cost = 0.00
+    (name, year) = name_and_year_from_filename(filename)
+    for line_count, row in enumerate(reader):
+        if row['order id'].startswith("D01"):
+            kindle_orders.append(row)
+            kindle_cost += cost_to_float(row['total'])
         else:
-            if row[0].startswith("D01"):
-                kindle_orders.append(row)
-            else:
-                other_orders.append(row)
-            row_date = row[3]
-            match = re.search(r"(\d+)/(\d+)/(\d+)", row_date)
-            if (match):
-                row_year = match.group(3)
-                if year == 0:
-                    year = row_year
-                elif row_year != year:
-                    print "\033[93mYear mismatch: previous row had %d, this row has %d\n%s\n \x1b[0m" % (int(year), int(row_year), str.join(",", row))
+            other_orders.append(row)
+            other_cost += cost_to_float(row['total'])
 
-        line_count += 1
+    total_cost = kindle_cost + other_cost
 
-    print "%d\tTotal orders: %d\tKindle orders: %d\tOther orders: %d" % (int(year), line_count-1, len(kindle_orders), len(other_orders))
-
+    print "%s %d\tTotal: %d\t%s%1.2f\tKindle: %d\t%s%1.2f\tOther: %d\t%s%1.2f" % (
+        name, int(year), line_count, POUND, total_cost, len(kindle_orders), POUND, kindle_cost, len(other_orders),
+        POUND, other_cost)
