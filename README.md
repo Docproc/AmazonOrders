@@ -6,7 +6,7 @@ Download "All years" as CSV (or individual years)
 
 ## Usage
 
-`analyse.py <filename.csv>`
+`python3 analyse_orders_pandas.py <filename.csv>`
 
 Filename should be in the format `name_year_XXX.csv`
 
